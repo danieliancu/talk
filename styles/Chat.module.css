@@ -1,0 +1,166 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    max-width: 800px;
+    margin: 0 auto;
+    height: 100vh;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .chat {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background: #f1f1f1;
+  }
+  
+  .bubbleWrap {
+    width: 100%;
+    display: flex;
+    margin-bottom: 10px;
+  }
+  
+  .user {
+    justify-content: flex-end;
+  }
+  
+  .bot {
+    justify-content: flex-start;
+  }
+  
+  .bubble {
+    max-width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    background: #d1d5db;
+  }
+  
+  .user .bubble {
+    background: #d1d5db;
+    text-align: right;
+  }
+  
+  .bot .bubble {
+    background: #bfdbfe;
+    text-align: left;
+  }
+  
+  .inputWrap {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background: white;
+  }
+  
+  .inputWrap input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .buttons {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+  }
+  
+  .buttons button {
+    padding: 8px 16px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+  }
+  
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  
+  .modalContent {
+    width: 160px;
+    height: 160px;
+    background: white;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.25rem;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+
+  .courseBox {
+    overflow: hidden;
+    background: white !important;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: flex;
+    flex-direction: column;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+  }
+  
+  .mainCourse {
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .arrow {
+    margin-left: 8px;
+    transition: transform 0.3s;
+  }
+  
+  .mainCourse.open .arrow {
+    transform: rotate(180deg);
+  }
+  
+  .bodyCourse {
+    display: none;
+    margin-top: 8px;
+    line-height: 1.6;
+    color: #444;
+  }
+  
+  .bookButton {
+    background: cadetblue;
+    text-align: center;
+    margin: 10px 0 0;
+    padding: 6px;
+    color: white;
+    font-weight: bold;
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  

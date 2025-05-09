@@ -1,0 +1,126 @@
+// pages/api/ask.js
+
+const keywordSynonyms = {
+    smsts: "Site Management Safety Training Scheme",
+    sssts: "Site Supervisor Safety Training Scheme",
+    twc: "Temporary Works Coordinator",
+    tws: "Temporary Works Supervisor",
+    hsa: "Health and Safety Awareness",
+    nebosh: "NEBOSH National General Certificate in Occupational Health and Safety"
+  };
+  
+  function extractLocation(name) {
+    const parts = name.split("|");
+    return parts.length >= 2 ? parts[1].trim() : "Unknown";
+  }
+  
+  function searchCourses(allProducts, keyword = '', month = null, require_available_spaces = false, location = null) {
+    let keywordLower = keyword.toLowerCase().trim();
+    if (keywordSynonyms[keywordLower]) {
+      keywordLower = keywordSynonyms[keywordLower].toLowerCase();
+    }
+  
+    const monthLower = month?.toLowerCase().trim() || null;
+    const locationLower = location?.toLowerCase().trim() || null;
+  
+    return allProducts.filter(product => {
+      const name = product.name?.toLowerCase() || '';
+      const startDateStr = product.start_date || '';
+  
+      const matchesKeyword = keywordLower.split(" ").every(word => name.includes(word));
+      if (!matchesKeyword) return false;
+  
+      if (require_available_spaces && (!product.available_spaces || parseInt(product.available_spaces) <= 0)) {
+        return false;
+      }
+  
+      if (monthLower && startDateStr) {
+        const match = startDateStr.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i);
+        if (!match || match[1].toLowerCase() !== monthLower) return false;
+      }
+  
+      if (locationLower && !name.includes(locationLower)) {
+        return false;
+      }
+  
+      return true;
+    });
+  }
+  
+  export default async function handler(req, res) {
+    if (req.method !== "POST") {
+      return res.status(405).json({ error: "Method not allowed" });
+    }
+  
+    const { messages, functions, function_call } = req.body;
+  
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Missing OpenAI API key in environment." });
+    }
+  
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages,
+          functions,
+          function_call: function_call || "auto",
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.error?.message || "OpenAI API error" });
+      }
+  
+      const choice = data.choices?.[0];
+  
+      if (choice?.finish_reason === "function_call") {
+        const args = JSON.parse(choice.message.function_call.arguments || '{}');
+        const keyword = keywordSynonyms[args.keyword?.toLowerCase()] || args.keyword;
+  
+        const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
+        const allProducts = await courseRes.json();
+  
+        const results = searchCourses(allProducts, keyword, args.month, args.require_available_spaces, args.location);
+  
+        let intro = "";
+  
+        if (results.length > 0) {
+          intro = `Sure! I found ${results.length} ${keyword} course${results.length > 1 ? 's' : ''}. Here are the details:`;
+        } else {
+          intro = `I'm sorry, I couldn't find any ${keyword} courses matching your criteria.`;
+        }
+  
+        const reply = `${intro}<br><br>` + results.map(r => `
+          <div class="courseBox">
+            <span class="mainCourse">
+              ${r.name} <span class="arrow">▼</span>
+            </span>
+            <span class="bodyCourse">
+              📍 Location: ${extractLocation(r.name)}<br>
+              📅 Dates: ${r.dates_list}<br>
+              💷 Price: £${r.price}<br>
+              🪑 Available Spaces: ${r.available_spaces}
+            </span>
+            <a href="${r.link}" class="bookButton">BOOK NOW!</a>
+          </div>
+        `).join("");
+  
+        return res.status(200).json({ reply });
+      }
+  
+      const reply = choice?.message?.content || "No reply.";
+      return res.status(200).json({ reply });
+    } catch (error) {
+      console.error("API error:", error);
+      return res.status(500).json({ error: "Internal server error." });
+    }
+  }
+  
