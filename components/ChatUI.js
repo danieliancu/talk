@@ -1,4 +1,3 @@
-// ChatUI.js (Next.js component complet, cu voce + HTML interactiv pentru cursuri)
 import { useEffect, useRef, useState } from "react";
 import styles from "../styles/Chat.module.css";
 
@@ -29,27 +28,27 @@ export default function ChatUI() {
         }
       }
     };
-
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
 
+  const scrollToBottom = () => {
+    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
+  };
+
   const appendMessage = (text, isUser) => {
     const wrapper = document.createElement("div");
     wrapper.className = `${styles.bubbleWrap} ${isUser ? styles.user : styles.bot}`;
-
     const bubble = document.createElement("div");
     bubble.className = styles.bubble;
-
     if (text.includes("<div")) {
       bubble.innerHTML = text;
     } else {
       bubble.textContent = text;
     }
-
     wrapper.appendChild(bubble);
     chatRef.current.appendChild(wrapper);
-    chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    scrollToBottom();
   };
 
   const speak = (text) => {
@@ -68,67 +67,100 @@ export default function ChatUI() {
     setMessages(updatedMessages);
     setInput("");
 
-    try {
-      const response = await fetch("/api/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          functions: [
-            {
-              name: "searchCourses",
-              description: "Finds Target Zero Training courses using title keywords and optional filters like month or availability.",
-              parameters: {
-                type: "object",
-                properties: {
-                  keyword: { type: "string", description: "Search keyword like SMSTS, HSA, etc." },
-                  month: { type: "string", description: "Optional. Filter by course start month (e.g. July)" },
-                  location: { type: "string", description: "Optional. Filter by city or training location (e.g. Chelmsford)" },
-                  require_available_spaces: { type: "boolean", description: "Optional. If true, returns only courses with available seats." }
-                },
-                required: ["keyword"]
-              }
-            }
-          ],
-          function_call: "auto"
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.reply) {
-        const errorText = data.error || "Error from OpenAI.";
-        appendMessage(errorText, false);
-        return;
-      }
-
-      const reply = data.reply;
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
-      appendMessage(reply, false);
-      speak(reply);
-
-    } catch (error) {
-      console.error("Frontend fetch error:", error);
-      appendMessage("Network error. Please try again later.", false);
-    }
+    await sendToAPI(value, updatedMessages);
   };
 
+const sendToAPI = async (text, msgList) => {
+  try {
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: msgList,
+        functions: [
+          {
+            name: "searchCourses",
+            description: "Finds Target Zero Training courses using title keywords and optional filters like month or availability.",
+            parameters: {
+              type: "object",
+              properties: {
+                keyword: { type: "string", description: "Search keyword like SMSTS, HSA, etc." },
+                month: { type: "string", description: "Optional. Filter by course start month (e.g. July)" },
+                location: { type: "string", description: "Optional. Filter by city or training location (e.g. Chelmsford)" },
+                require_available_spaces: { type: "boolean", description: "Optional. If true, returns only courses with available seats." }
+              },
+              required: ["keyword"]
+            }
+          }
+        ],
+        function_call: "auto"
+      }),
+    });
+
+    const data = await response.json();
+    const fullReply = data.reply || "No reply from assistant.";
+
+    // ✅ Separă partea introductivă (prima propoziție sau frază)
+    const introMatch = fullReply.split(/[\n:]/)[0];
+    const intro = introMatch.trim().length > 0 ? introMatch.trim() + ":" : fullReply.slice(0, 120);
+
+    // 🔄 Afișează mesaj temporar: "typing..."
+    const tempBubble = document.createElement("div");
+    tempBubble.className = `${styles.bubbleWrap} ${styles.bot}`;
+    const bubble = document.createElement("div");
+    bubble.className = styles.bubble;
+    bubble.textContent = "Assistant is typing...";
+    tempBubble.appendChild(bubble);
+    chatRef.current.appendChild(tempBubble);
+    scrollToBottom();
+
+    // 🔈 Creează și pornește vorbirea
+    const utterance = new SpeechSynthesisUtterance(intro);
+    utterance.lang = "en-US";
+
+    utterance.onend = () => {
+      // Șterge mesajul temporar
+      if (tempBubble && tempBubble.parentNode) tempBubble.remove();
+
+      // ✅ Afișează mesajul complet în chat
+      appendMessage(fullReply, false);
+
+      // 🧠 Salvează în stare
+      setMessages(prev => [...prev, { role: "assistant", content: fullReply }]);
+    };
+
+    // Pornește vorbirea
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    console.error("Error:", err);
+    appendMessage("Network error. Please try again later.", false);
+  }
+};
+
+
   const startVoice = () => {
-    if (!("webkitSpeechRecognition" in window)) return alert("Browser does not support voice input");
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Browser does not support voice input");
+      return;
+    }
     const rec = new webkitSpeechRecognition();
     rec.lang = "en-US";
     rec.interimResults = false;
     rec.maxAlternatives = 1;
+
     rec.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      setInput(transcript);
+      appendMessage(transcript, true);
+      const updatedMessages = [...messages, { role: "user", content: transcript }];
+      setMessages(updatedMessages);
+      sendToAPI(transcript, updatedMessages);
       setShowVoiceModal(false);
-      setTimeout(() => sendMessage(), 300);
     };
+
     rec.onerror = () => setShowVoiceModal(false);
     rec.onend = () => setShowVoiceModal(false);
+
     setRecognition(rec);
     setShowVoiceModal(true);
     rec.start();
