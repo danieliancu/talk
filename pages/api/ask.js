@@ -14,11 +14,25 @@ const keywordSynonyms = {
     return parts.length >= 2 ? parts[1].trim() : "Unknown";
   }
   
+  function isFutureDate(startDateStr) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight
+    const parsed = new Date(startDateStr);
+    return !isNaN(parsed) && parsed >= today;
+  }
+  
   function searchCourses(allProducts, keyword = '', month = null, require_available_spaces = false, location = null) {
-    let keywordLower = keyword.toLowerCase().trim();
-    if (keywordSynonyms[keywordLower]) {
-      keywordLower = keywordSynonyms[keywordLower].toLowerCase();
+    const keywordInput = keyword.toLowerCase().trim();
+    // const resolvedKeyword = (keywordSynonyms[keywordInput] || keyword).toLowerCase();
+
+    let resolvedKeyword = keywordInput;
+    for (const key in keywordSynonyms) {
+      if (keywordInput.includes(key)) {
+        resolvedKeyword = keywordInput.replace(key, keywordSynonyms[key]);
+        break;
+      }
     }
+    resolvedKeyword = resolvedKeyword.toLowerCase();    
   
     const monthLower = month?.toLowerCase().trim() || null;
     const locationLower = location?.toLowerCase().trim() || null;
@@ -27,7 +41,8 @@ const keywordSynonyms = {
       const name = product.name?.toLowerCase() || '';
       const startDateStr = product.start_date || '';
   
-      const matchesKeyword = keywordLower.split(" ").every(word => name.includes(word));
+      // Caută toate cuvintele din resolvedKeyword în titlu
+      const matchesKeyword = resolvedKeyword.split(" ").every(word => name.includes(word));
       if (!matchesKeyword) return false;
   
       if (require_available_spaces && (!product.available_spaces || parseInt(product.available_spaces) <= 0)) {
@@ -46,6 +61,7 @@ const keywordSynonyms = {
       return true;
     });
   }
+  
   
   export default async function handler(req, res) {
     if (req.method !== "POST") {
@@ -83,22 +99,32 @@ const keywordSynonyms = {
   
       if (choice?.finish_reason === "function_call") {
         const args = JSON.parse(choice.message.function_call.arguments || '{}');
-        const keyword = keywordSynonyms[args.keyword?.toLowerCase()] || args.keyword;
+        const { keyword, month, location } = args;
+        const params = [keyword, month, location].filter(Boolean);
   
+        if (params.length < 2) {
+          let knownParam = keyword ? `the course type \"${keyword}\"` : month ? `the month \"${month}\"` : location ? `the location \"${location}\"` : null;
+          const followup = knownParam
+            ? `Thanks! You've told me ${knownParam}. Could you also provide one more detail, like the month or location, so I can show you relevant courses?`
+            : `To help you better, could you please let me know the course type, month, or location?`;
+          return res.status(200).json({ reply: followup });
+        }
+  
+        const resolvedKeyword = keywordSynonyms[keyword?.toLowerCase()] || keyword;
         const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
         const allProducts = await courseRes.json();
   
-        const results = searchCourses(allProducts, keyword, args.month, args.require_available_spaces, args.location);
+        const results = searchCourses(allProducts, resolvedKeyword, month, args.require_available_spaces, location);
   
         let intro = "";
   
         if (results.length > 0) {
-          intro = `Sure! I found ${results.length} ${keyword} course${results.length > 1 ? 's' : ''}. Here are the details:`;
+          intro = `Sure! I found ${results.length} ${resolvedKeyword} course${results.length > 1 ? 's' : ''}. Here are the details:`;
         } else {
-          intro = `I'm sorry, I couldn't find any ${keyword} courses matching your criteria.`;
+          intro = `I'm sorry, I couldn't find any ${resolvedKeyword} courses matching your criteria.`;
         }
   
-        const reply = `${intro}<br><br>` + results.map(r => `
+        const reply = `${intro}` + results.map(r => `
           <div class="courseBox">
             <span class="mainCourse">
               ${r.name} <span class="arrow">▼</span>
