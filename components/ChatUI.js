@@ -1,7 +1,10 @@
 // ChatUI.js
 
 import { useEffect, useRef, useState } from "react";
+import { FiMic } from "react-icons/fi";
+import { FaPaperPlane } from "react-icons/fa";
 import styles from "../styles/Chat.module.css";
+
 
 export default function ChatUI() {
   const chatRef = useRef(null);
@@ -18,26 +21,42 @@ Today's date is ${new Date().toLocaleDateString("en-GB", {
         day: "numeric"
       })}. Always use the function if the user requests something specific.`,
   },
+    {
+    role: "assistant",
+    content: "Hello! How can I assist you today?",
+  }
 ]);
   const [recognition, setRecognition] = useState(null);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
   useEffect(() => {
-    const handler = (e) => {
-      const target = e.target.closest(".mainCourse");
-      if (target) {
-        const body = target.nextElementSibling;
-        const arrow = target.querySelector(".arrow");
-        if (body && arrow) {
-          const isOpen = body.style.display === "block";
-          body.style.display = isOpen ? "none" : "block";
-          arrow.textContent = isOpen ? "▼" : "▲";
-        }
+  const handler = (e) => {
+    const target = e.target.closest(".mainCourse");
+    if (target) {
+      const courseBox = target.closest(".courseBox");
+      const body = courseBox?.querySelector(".bodyCourse");
+      const arrow = target.querySelector(".arrow");
+
+      if (body && arrow) {
+        const isOpen = target.classList.contains("open");
+        target.classList.toggle("open", !isOpen);
+        body.style.display = isOpen ? "none" : "block";
+        arrow.textContent = isOpen ? "▼" : "▲";
       }
-    };
+    }
+  };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, []);
+
+  useEffect(() => {
+  messages.forEach((msg) => {
+    if (msg.role !== "system") {
+      appendMessage(msg.content, msg.role === "user");
+    }
+  });
+}, []);
+
 
   const scrollToBottom = () => {
     chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
@@ -228,7 +247,9 @@ const sendToAPI = async (text, msgList) => {
     <div className={styles.container}>
       <audio id="tts-audio" preload="auto" />
       <div ref={chatRef} className={styles.chat}></div>
-
+      <div className={styles.voiceWrap}>
+      <button className={styles.voice} onClick={startVoice}><FiMic size={34} color="#19307F" /></button>
+      </div>
       <div className={styles.inputWrap}>
         <input
           ref={inputRef}
@@ -236,11 +257,9 @@ const sendToAPI = async (text, msgList) => {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about courses..."
         />
-        <div className={styles.buttons}>
-          <button onClick={sendMessage}>Send</button>
-          <button onClick={startVoice}>🎤 Speak</button>
-          <button onClick={stopVoice}>🔇 Stop</button>
-        </div>
+        <button style={{ backgroundColor: "#25D366", color: "white", border: "none", padding: "8px 14px", borderRadius: "5px", display: "flex", alignItems: "center", gap: "6px" }} onClick={sendMessage}>
+          <FaPaperPlane size={20} color="white" />
+        </button>
       </div>
 
       {showVoiceModal && (

@@ -44,35 +44,42 @@ export default async function handler(req, res) {
       let { keyword, month, location } = args;
       const typeFilter = args.type || type || null;
 
-      // Normalize keyword
+      // ✅ fallback dacă keyword lipsește → extragem din ultimul mesaj
+      const lastUserMsg = messages.at(-1)?.content.toLowerCase() || "";
+      if (!keyword && lastUserMsg) {
+        const words = lastUserMsg.split(/\s+/);
+        for (const word of words) {
+          const norm = word.toLowerCase().replace(/[^\w\s]/g, "").trim();
+          if (synonymLookup[norm]) {
+            keyword = norm;
+            break;
+          }
+        }
+      }
+
       const keywordInput = keyword?.toLowerCase().replace(/[^\w\s]/g, "").trim();
       let validKey = synonymLookup[keywordInput];
 
-      const lastUserMsg = messages.at(-1)?.content.toLowerCase() || "";
       const secondLastMsg = messages.at(-2)?.content || "";
       const suggestionMatch = secondLastMsg.match(/Did you mean "(.*?)" \((.*?)\)/i);
 
-      // ✅ Dacă userul a confirmat sugestia anterioară
       if (!validKey && lastUserMsg === "yes" && suggestionMatch) {
         validKey = suggestionMatch[2].toLowerCase();
         keyword = validKey;
       }
 
-      // ✅ Dacă a spus „no” la sugestie
       if (!validKey && lastUserMsg === "no" && suggestionMatch) {
         return res.status(200).json({
           reply: `No problem! Could you please tell me the correct course name you're looking for?`
         });
       }
 
-      // ✅ Fallback special pentru "nebosh"
       if (!validKey && keywordInput === "nebosh") {
         return res.status(200).json({
           reply: `NEBOSH includes multiple certifications. Did you mean "NEBOSH General" or "NEBOSH Construction"? Please specify.`
         });
       }
 
-      // ✅ Dacă keyword-ul nu este valid și nu e nici confirmare
       if (!validKey) {
         const partialMatch = Object.entries(keywordSynonyms).find(
           ([abbr, full]) =>
@@ -142,34 +149,36 @@ export default async function handler(req, res) {
         intro = `I'm sorry, I couldn't find any ${validKey.toUpperCase()} courses matching your criteria.`;
       }
 
-      const reply = `${intro}` + results.map(r => `
-        <div class="courseBox">
-          <span class="mainCourse">
-            ${r.name} <span class="arrow">▼</span>
-          </span>
-          <span class="bodyCourse">
-            📍 Location: ${r._meta.location}<br>
-            📅 Dates: ${r.dates_list}<br>
-            💷 Price: £${r.price}<br>
-            🪑 Available Spaces: ${r.available_spaces}
-          </span>
-          <a href="${r.link}" class="bookButton">BOOK NOW!</a>
-        </div>
-      `).join("");
+const reply = `${intro}` + results.map(r => `
+  <div class="courseBox">
+    <span class="mainCourse">
+      ${r.name} <span class="arrow">▼</span>
+    </span>
+    <span class="bodyCourse">
+      <ul class="courseDetails">
+        <li><strong>Location:</strong> ${r._meta.location}</li>
+        <li><strong>Dates:</strong> ${r.dates_list}</li>
+        <li><strong>Price:</strong> £${r.price}</li>
+        <li><strong>Available Spaces:</strong> ${r.available_spaces}</li>
+      </ul>
+    </span>
+    <a href="${r.link}" class="bookButton">BOOK NOW!</a>
+  </div>
+`).join("");
+
 
       return res.status(200).json({ reply });
     }
 
-let reply = "No reply from assistant.";
+    let reply = "No reply from assistant.";
 
-if (choice?.finish_reason === "stop" && choice?.message?.content) {
-  reply = choice.message.content;
-} else if (choice?.finish_reason === "stop" && !choice.message?.content) {
-  reply = "Could you please clarify what course you're looking for?";
-}
+    if (choice?.finish_reason === "stop" && choice?.message?.content) {
+      reply = choice.message.content;
+    } else if (choice?.finish_reason === "stop" && !choice.message?.content) {
+      reply = "Could you please clarify what course you're looking for?";
+    }
 
-return res.status(200).json({ reply });
-
+    return res.status(200).json({ reply });
 
   } catch (error) {
     console.error("API error:", error);
