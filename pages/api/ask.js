@@ -1,152 +1,178 @@
 // pages/api/ask.js
 
-const keywordSynonyms = {
-    smsts: "Site Management Safety Training Scheme",
-    sssts: "Site Supervisor Safety Training Scheme",
-    twc: "Temporary Works Coordinator",
-    tws: "Temporary Works Supervisor",
-    hsa: "Health and Safety Awareness",
-    nebosh: "NEBOSH National General Certificate in Occupational Health and Safety"
-  };
-  
-  function extractLocation(name) {
-    const parts = name.split("|");
-    return parts.length >= 2 ? parts[1].trim() : "Unknown";
-  }
-  
-  function isFutureDate(startDateStr) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize to midnight
-    const parsed = new Date(startDateStr);
-    return !isNaN(parsed) && parsed >= today;
-  }
-  
-  function searchCourses(allProducts, keyword = '', month = null, require_available_spaces = false, location = null) {
-    const keywordInput = keyword.toLowerCase().trim();
-    // const resolvedKeyword = (keywordSynonyms[keywordInput] || keyword).toLowerCase();
+import {
+  searchCourses,
+  extractLocation,
+  synonymLookup,
+  keywordSynonyms
+} from "@/lib/search";
 
-    let resolvedKeyword = keywordInput;
-    for (const key in keywordSynonyms) {
-      if (keywordInput.includes(key)) {
-        resolvedKeyword = keywordInput.replace(key, keywordSynonyms[key]);
-        break;
-      }
-    }
-    resolvedKeyword = resolvedKeyword.toLowerCase();    
-  
-    const monthLower = month?.toLowerCase().trim() || null;
-    const locationLower = location?.toLowerCase().trim() || null;
-  
-    return allProducts.filter(product => {
-      const name = product.name?.toLowerCase() || '';
-      const startDateStr = product.start_date || '';
-  
-      // Caută toate cuvintele din resolvedKeyword în titlu
-      const matchesKeyword = resolvedKeyword.split(" ").every(word => name.includes(word));
-      if (!matchesKeyword) return false;
-  
-      if (require_available_spaces && (!product.available_spaces || parseInt(product.available_spaces) <= 0)) {
-        return false;
-      }
-  
-      if (monthLower && startDateStr) {
-        const match = startDateStr.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i);
-        if (!match || match[1].toLowerCase() !== monthLower) return false;
-      }
-  
-      if (locationLower && !name.includes(locationLower)) {
-        return false;
-      }
-  
-      return true;
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const { messages, functions, function_call, type } = req.body;
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: "Missing OpenAI API key in environment." });
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages,
+        functions,
+        function_call: function_call || "auto",
+      }),
     });
-  }
-  
-  
-  export default async function handler(req, res) {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || "OpenAI API error" });
     }
-  
-    const { messages, functions, function_call } = req.body;
-  
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Missing OpenAI API key in environment." });
-    }
-  
-    try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages,
-          functions,
-          function_call: function_call || "auto",
-        }),
-      });
-  
-      const data = await response.json();
-  
-      if (!response.ok) {
-        return res.status(response.status).json({ error: data.error?.message || "OpenAI API error" });
+
+    const choice = data.choices?.[0];
+    if (choice?.finish_reason === "function_call") {
+      const args = JSON.parse(choice.message.function_call.arguments || '{}');
+      let { keyword, month, location } = args;
+      const typeFilter = args.type || type || null;
+
+      // Normalize keyword
+      const keywordInput = keyword?.toLowerCase().replace(/[^\w\s]/g, "").trim();
+      let validKey = synonymLookup[keywordInput];
+
+      const lastUserMsg = messages.at(-1)?.content.toLowerCase() || "";
+      const secondLastMsg = messages.at(-2)?.content || "";
+      const suggestionMatch = secondLastMsg.match(/Did you mean "(.*?)" \((.*?)\)/i);
+
+      // ✅ Dacă userul a confirmat sugestia anterioară
+      if (!validKey && lastUserMsg === "yes" && suggestionMatch) {
+        validKey = suggestionMatch[2].toLowerCase();
+        keyword = validKey;
       }
-  
-      const choice = data.choices?.[0];
-  
-      if (choice?.finish_reason === "function_call") {
-        const args = JSON.parse(choice.message.function_call.arguments || '{}');
-        const { keyword, month, location } = args;
-        const params = [keyword, month, location].filter(Boolean);
-  
-        if (params.length < 2) {
-          let knownParam = keyword ? `the course type \"${keyword}\"` : month ? `the month \"${month}\"` : location ? `the location \"${location}\"` : null;
-          const followup = knownParam
-            ? `Thanks! You've told me ${knownParam}. Could you also provide one more detail, like the month or location, so I can show you relevant courses?`
-            : `To help you better, could you please let me know the course type, month, or location?`;
-          return res.status(200).json({ reply: followup });
-        }
-  
-        const resolvedKeyword = keywordSynonyms[keyword?.toLowerCase()] || keyword;
-        const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
-        const allProducts = await courseRes.json();
-  
-        const results = searchCourses(allProducts, resolvedKeyword, month, args.require_available_spaces, location);
-  
-        let intro = "";
-  
-        if (results.length > 0) {
-          intro = `Sure! I found ${results.length} ${resolvedKeyword} course${results.length > 1 ? 's' : ''}. Here are the details:`;
-        } else {
-          intro = `I'm sorry, I couldn't find any ${resolvedKeyword} courses matching your criteria.`;
-        }
-  
-        const reply = `${intro}` + results.map(r => `
-          <div class="courseBox">
-            <span class="mainCourse">
-              ${r.name} <span class="arrow">▼</span>
-            </span>
-            <span class="bodyCourse">
-              📍 Location: ${extractLocation(r.name)}<br>
-              📅 Dates: ${r.dates_list}<br>
-              💷 Price: £${r.price}<br>
-              🪑 Available Spaces: ${r.available_spaces}
-            </span>
-            <a href="${r.link}" class="bookButton">BOOK NOW!</a>
-          </div>
-        `).join("");
-  
-        return res.status(200).json({ reply });
+
+      // ✅ Dacă a spus „no” la sugestie
+      if (!validKey && lastUserMsg === "no" && suggestionMatch) {
+        return res.status(200).json({
+          reply: `No problem! Could you please tell me the correct course name you're looking for?`
+        });
       }
-  
-      const reply = choice?.message?.content || "No reply.";
+
+      // ✅ Fallback special pentru "nebosh"
+      if (!validKey && keywordInput === "nebosh") {
+        return res.status(200).json({
+          reply: `NEBOSH includes multiple certifications. Did you mean "NEBOSH General" or "NEBOSH Construction"? Please specify.`
+        });
+      }
+
+      // ✅ Dacă keyword-ul nu este valid și nu e nici confirmare
+      if (!validKey) {
+        const partialMatch = Object.entries(keywordSynonyms).find(
+          ([abbr, full]) =>
+            keywordInput && (abbr.includes(keywordInput) || full.toLowerCase().includes(keywordInput))
+        );
+
+        if (partialMatch) {
+          const [abbr, full] = partialMatch;
+          return res.status(200).json({
+            reply: `Did you mean "${full}" (${abbr.toUpperCase()})? Please confirm by the course code or saying "yes".`
+          });
+        }
+
+        return res.status(200).json({
+          reply: `I couldn't identify a valid course type. Please specify one of the following: ${Object.keys(keywordSynonyms).join(", ").toUpperCase()}`
+        });
+      }
+
+      const params = [month, location].filter(Boolean);
+      if (params.length < 1) {
+        return res.status(200).json({
+          reply: `Thanks! You've told me the course type. Could you also provide the month or location so I can show you relevant courses?`
+        });
+      }
+
+      const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
+      const allProducts = await courseRes.json();
+
+      const results = searchCourses(
+        allProducts,
+        validKey,
+        month,
+        args.require_available_spaces,
+        location,
+        typeFilter
+      );
+
+      const userQuestion = messages.at(-1)?.content.toLowerCase() || "";
+
+      if (userQuestion.includes("cheapest") || userQuestion.includes("lowest price")) {
+        results.sort((a, b) => a._meta.price - b._meta.price);
+      } else if (userQuestion.includes("most expensive") || userQuestion.includes("highest price")) {
+        results.sort((a, b) => b._meta.price - a._meta.price);
+      } else if (userQuestion.includes("soonest") || userQuestion.includes("earliest")) {
+        results.sort((a, b) => a._meta.start - b._meta.start);
+      } else if (userQuestion.includes("latest")) {
+        results.sort((a, b) => b._meta.start - a._meta.start);
+      } else if (userQuestion.includes("shortest")) {
+        results.sort((a, b) => a._meta.duration_days - b._meta.duration_days);
+      } else if (userQuestion.includes("longest")) {
+        results.sort((a, b) => b._meta.duration_days - a._meta.duration_days);
+      } else if (userQuestion.includes("most spaces")) {
+        results.sort((a, b) => b._meta.available_spaces - a._meta.available_spaces);
+      } else if (userQuestion.includes("least spaces")) {
+        results.sort((a, b) => a._meta.available_spaces - b._meta.available_spaces);
+      }
+
+      let intro = "";
+      if (results.length > 0) {
+        const hasRefresher = results.some(r => r._meta.type === "refresher");
+        intro = `Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.`;
+        if (hasRefresher) {
+          intro += `\n⚠️ Note: Some of these are Refresher courses.`;
+        }
+        intro += ` Here are the details:`;
+      } else {
+        intro = `I'm sorry, I couldn't find any ${validKey.toUpperCase()} courses matching your criteria.`;
+      }
+
+      const reply = `${intro}` + results.map(r => `
+        <div class="courseBox">
+          <span class="mainCourse">
+            ${r.name} <span class="arrow">▼</span>
+          </span>
+          <span class="bodyCourse">
+            📍 Location: ${r._meta.location}<br>
+            📅 Dates: ${r.dates_list}<br>
+            💷 Price: £${r.price}<br>
+            🪑 Available Spaces: ${r.available_spaces}
+          </span>
+          <a href="${r.link}" class="bookButton">BOOK NOW!</a>
+        </div>
+      `).join("");
+
       return res.status(200).json({ reply });
-    } catch (error) {
-      console.error("API error:", error);
-      return res.status(500).json({ error: "Internal server error." });
     }
+
+let reply = "No reply from assistant.";
+
+if (choice?.finish_reason === "stop" && choice?.message?.content) {
+  reply = choice.message.content;
+} else if (choice?.finish_reason === "stop" && !choice.message?.content) {
+  reply = "Could you please clarify what course you're looking for?";
+}
+
+return res.status(200).json({ reply });
+
+
+  } catch (error) {
+    console.error("API error:", error);
+    return res.status(500).json({ error: "Internal server error." });
   }
-  
+}
