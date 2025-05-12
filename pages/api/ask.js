@@ -80,6 +80,13 @@ export default async function handler(req, res) {
         });
       }
 
+      if (!validKey && keywordInput === "iosh") {
+        return res.status(200).json({
+          reply: `IOSH includes two options. Did you mean "IOSH Working Safely" or "IOSH Managing Safely"?`
+        });
+      }
+
+
       if (!validKey) {
         const partialMatch = Object.entries(keywordSynonyms).find(
           ([abbr, full]) =>

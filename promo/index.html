@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Journey Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+  <div class="mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold mb-6">🎯 User Journey Monitoring Dashboard</h1>
+
+    <div class="overflow-x-auto bg-white shadow rounded-lg">
+      <table class="min-w-full text-sm text-left">
+        <thead class="bg-blue-50 text-gray-700 uppercase text-xs">
+          <tr>
+            <th class="px-4 py-3">Session ID</th>
+            <th class="px-4 py-3">User ID</th>
+            <th class="px-4 py-3">Start Time</th>
+            <th class="px-4 py-3">Day</th>
+            <th class="px-4 py-3">Duration (s)</th>
+            <th class="px-4 py-3">Entry</th>
+            <th class="px-4 py-3">Keyword</th>
+            <th class="px-4 py-3">Mode</th>
+            <th class="px-4 py-3">Location</th>
+            <th class="px-4 py-3">Type</th>
+            <th class="px-4 py-3">Filters</th>
+            <th class="px-4 py-3">Courses</th>
+            <th class="px-4 py-3">Booked?</th>
+            <th class="px-4 py-3">Click</th>
+            <th class="px-4 py-3">Suggestion</th>
+            <th class="px-4 py-3">Score</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">abc123</td>
+            <td class="px-4 py-2">guest_98</td>
+            <td class="px-4 py-2">2025-05-11 15:03</td>
+            <td class="px-4 py-2">Sunday</td>
+            <td class="px-4 py-2">114</td>
+            <td class="px-4 py-2">Voice</td>
+            <td class="px-4 py-2">smsts</td>
+            <td class="px-4 py-2">Voice</td>
+            <td class="px-4 py-2">London</td>
+            <td class="px-4 py-2">Refresher</td>
+            <td class="px-4 py-2">May / London</td>
+            <td class="px-4 py-2">3</td>
+            <td class="px-4 py-2 text-red-500 font-bold">No</td>
+            <td class="px-4 py-2">✔️</td>
+            <td class="px-4 py-2">Earliest course</td>
+            <td class="px-4 py-2">87</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">xyz456</td>
+            <td class="px-4 py-2">guest_102</td>
+            <td class="px-4 py-2">2025-05-11 16:10</td>
+            <td class="px-4 py-2">Sunday</td>
+            <td class="px-4 py-2">47</td>
+            <td class="px-4 py-2">Text</td>
+            <td class="px-4 py-2">nebosh</td>
+            <td class="px-4 py-2">Text</td>
+            <td class="px-4 py-2">—</td>
+            <td class="px-4 py-2">Unspecified</td>
+            <td class="px-4 py-2">—</td>
+            <td class="px-4 py-2">0</td>
+            <td class="px-4 py-2 text-red-500 font-bold">No</td>
+            <td class="px-4 py-2">✖️</td>
+            <td class="px-4 py-2">Clarification prompt</td>
+            <td class="px-4 py-2">42</td>
+          </tr>
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2">lmn789</td>
+            <td class="px-4 py-2">user_43</td>
+            <td class="px-4 py-2">2025-05-10 18:44</td>
+            <td class="px-4 py-2">Saturday</td>
+            <td class="px-4 py-2">212</td>
+            <td class="px-4 py-2">Voice</td>
+            <td class="px-4 py-2">iosh managing</td>
+            <td class="px-4 py-2">Voice</td>
+            <td class="px-4 py-2">Birmingham</td>
+            <td class="px-4 py-2">Standard</td>
+            <td class="px-4 py-2">June / Birmingham</td>
+            <td class="px-4 py-2">2</td>
+            <td class="px-4 py-2 text-green-600 font-bold">TWS – 18 June, £410</td>
+            <td class="px-4 py-2">✔️</td>
+            <td class="px-4 py-2">Seats highlighted</td>
+            <td class="px-4 py-2">74</td>
+          </tr>
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">gtr998</td>
+  <td class="px-4 py-2">guest_119</td>
+  <td class="px-4 py-2">2025-05-11 10:22</td>
+  <td class="px-4 py-2">Sunday</td>
+  <td class="px-4 py-2">163</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">tws</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">Leeds</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">June / Leeds</td>
+  <td class="px-4 py-2">2</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">TWS – 18 June, £410</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">Auto-suggestion</td>
+  <td class="px-4 py-2">79</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">bcd875</td>
+  <td class="px-4 py-2">user_24</td>
+  <td class="px-4 py-2">2025-05-10 14:13</td>
+  <td class="px-4 py-2">Saturday</td>
+  <td class="px-4 py-2">75</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">sssts</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">Cardiff</td>
+  <td class="px-4 py-2">Refresher</td>
+  <td class="px-4 py-2">July / Cardiff</td>
+  <td class="px-4 py-2">1</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">SSSTS Refresher – 3 July, £299</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">Direct match</td>
+  <td class="px-4 py-2">85</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">xyt212</td>
+  <td class="px-4 py-2">guest_44</td>
+  <td class="px-4 py-2">2025-05-10 09:48</td>
+  <td class="px-4 py-2">Saturday</td>
+  <td class="px-4 py-2">102</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">twc</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">—</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">—</td>
+  <td class="px-4 py-2">1</td>
+  <td class="px-4 py-2 text-red-500 font-bold">❌ No</td>
+  <td class="px-4 py-2">✖️</td>
+  <td class="px-4 py-2">Requested location</td>
+  <td class="px-4 py-2">55</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">klm888</td>
+  <td class="px-4 py-2">user_71</td>
+  <td class="px-4 py-2">2025-05-09 17:55</td>
+  <td class="px-4 py-2">Friday</td>
+  <td class="px-4 py-2">189</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">nebosh general</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">Manchester</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">May</td>
+  <td class="px-4 py-2">2</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">NEBOSH General – 22 May, £890</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">Asked price range</td>
+  <td class="px-4 py-2">91</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">qwe764</td>
+  <td class="px-4 py-2">guest_39</td>
+  <td class="px-4 py-2">2025-05-09 11:15</td>
+  <td class="px-4 py-2">Friday</td>
+  <td class="px-4 py-2">63</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">hsa</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">Brighton</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">June / Brighton</td>
+  <td class="px-4 py-2">1</td>
+  <td class="px-4 py-2 text-red-500 font-bold">❌ No</td>
+  <td class="px-4 py-2">✖️</td>
+  <td class="px-4 py-2">Suggested availability</td>
+  <td class="px-4 py-2">47</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">jkl932</td>
+  <td class="px-4 py-2">user_87</td>
+  <td class="px-4 py-2">2025-05-08 13:33</td>
+  <td class="px-4 py-2">Thursday</td>
+  <td class="px-4 py-2">208</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">iosh working</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">Reading</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">June</td>
+  <td class="px-4 py-2">2</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">IOSH Working Safely – 6 June, £190</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">Course explained</td>
+  <td class="px-4 py-2">88</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">stu045</td>
+  <td class="px-4 py-2">guest_12</td>
+  <td class="px-4 py-2">2025-05-08 09:17</td>
+  <td class="px-4 py-2">Thursday</td>
+  <td class="px-4 py-2">98</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">sssts</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">Glasgow</td>
+  <td class="px-4 py-2">Refresher</td>
+  <td class="px-4 py-2">July / Glasgow</td>
+  <td class="px-4 py-2">1</td>
+  <td class="px-4 py-2 text-red-500 font-bold">❌ No</td>
+  <td class="px-4 py-2">✖️</td>
+  <td class="px-4 py-2">Asked about certification</td>
+  <td class="px-4 py-2">52</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">fgh007</td>
+  <td class="px-4 py-2">user_12</td>
+  <td class="px-4 py-2">2025-05-07 15:45</td>
+  <td class="px-4 py-2">Wednesday</td>
+  <td class="px-4 py-2">172</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">twc</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">London</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">June</td>
+  <td class="px-4 py-2">3</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">TWC – 12 June, £435</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">User asked for duration</td>
+  <td class="px-4 py-2">83</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">zxc321</td>
+  <td class="px-4 py-2">guest_02</td>
+  <td class="px-4 py-2">2025-05-07 10:02</td>
+  <td class="px-4 py-2">Wednesday</td>
+  <td class="px-4 py-2">69</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">health & safety</td>
+  <td class="px-4 py-2">Text</td>
+  <td class="px-4 py-2">—</td>
+  <td class="px-4 py-2">Unknown</td>
+  <td class="px-4 py-2">—</td>
+  <td class="px-4 py-2">0</td>
+  <td class="px-4 py-2 text-red-500 font-bold">❌ No</td>
+  <td class="px-4 py-2">✖️</td>
+  <td class="px-4 py-2">Suggested HSA</td>
+  <td class="px-4 py-2">41</td>
+</tr>
+
+<tr class="hover:bg-gray-50">
+  <td class="px-4 py-2">gtr998</td>
+  <td class="px-4 py-2">guest_119</td>
+  <td class="px-4 py-2">2025-05-11 10:22</td>
+  <td class="px-4 py-2">Sunday</td>
+  <td class="px-4 py-2">163</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">tws</td>
+  <td class="px-4 py-2">Voice</td>
+  <td class="px-4 py-2">Leeds</td>
+  <td class="px-4 py-2">Standard</td>
+  <td class="px-4 py-2">June / Leeds</td>
+  <td class="px-4 py-2">2</td>
+  <td class="px-4 py-2 text-green-600 font-semibold">TWS – 18 June, £410</td>
+  <td class="px-4 py-2">✔️</td>
+  <td class="px-4 py-2">Auto-suggestion</td>
+  <td class="px-4 py-2">79</td>
+</tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</body>
+</html>

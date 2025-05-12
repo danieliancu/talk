@@ -257,7 +257,7 @@ const sendToAPI = async (text, msgList) => {
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about courses..."
         />
-        <button style={{ backgroundColor: "#25D366", color: "white", border: "none", padding: "8px 14px", borderRadius: "5px", display: "flex", alignItems: "center", gap: "6px" }} onClick={sendMessage}>
+        <button className={styles.sendButton} onClick={sendMessage}>
           <FaPaperPlane size={20} color="white" />
         </button>
       </div>
