@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FiMic } from "react-icons/fi";
-import { FaPaperPlane, FaPhoneSlash } from "react-icons/fa";
+import { FaPaperPlane, FaPowerOff, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 import styles from "../styles/Chat.module.css";
 import { keywordSynonyms } from "@/lib/search";
 
@@ -11,6 +11,8 @@ export default function ChatUI() {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
   const [input, setInput] = useState("");
+  const [isMuted, setIsMuted] = useState(false);
+
 
 const courseListHtml = Object.entries(keywordSynonyms)
   .map(([abbr, full]) => `<li><strong>${abbr.toUpperCase()}</strong>: ${full}</li>`)
@@ -90,12 +92,15 @@ const [messages, setMessages] = useState([
     scrollToBottom();
   };
 
-  const speak = (text) => {
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    window.speechSynthesis.speak(utterance);
-  };
+const speak = (text) => {
+  if (isMuted) return; // NU vorbi dacă e mut
+
+  if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "en-US";
+  window.speechSynthesis.speak(utterance);
+};
+
 
 const sendMessage = async () => {
   const value = input.trim();
@@ -203,8 +208,12 @@ const sendToAPI = async (text, msgList) => {
     const utterance = new SpeechSynthesisUtterance(spokenIntro);
     utterance.lang = "en-US";
 
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+
+    if (!isMuted) {
+  if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utterance);
+}
+
 
   } catch (err) {
     console.error("Error:", err);
@@ -256,8 +265,29 @@ const sendToAPI = async (text, msgList) => {
       <audio id="tts-audio" preload="auto" />
       <div ref={chatRef} className={styles.chat}></div>
       <div className={styles.voiceWrap}>
+<button
+  className={styles.voiceMute}
+  onClick={() => {
+    setIsMuted((prev) => {
+      const newValue = !prev;
+      localStorage.setItem("isMuted", newValue); // optional, dacă vrei să salvezi
+      if (newValue) {
+        window.speechSynthesis.cancel(); // 🛑 oprește orice speech imediat
+      }
+      return newValue;
+    });
+  }}
+>
+  {isMuted ? (
+    <FaVolumeMute style={{ color: "red" }} size={34} />
+  ) : (
+    <FaVolumeUp size={34} color="#19307F" />
+  )}
+</button>
+
+
       <button className={styles.voice} onClick={startVoice}><FiMic size={34} color="#19307F" /></button>
-      <button className={styles.voiceClose} onClick={()=>window.location.reload()}><FaPhoneSlash size={34} color="white" /></button>
+      <button className={styles.voiceClose} onClick={()=>window.location.reload()}><FaPowerOff size={34} color="white" /></button>
       </div>
       <div className={styles.inputWrap}>
         <input

@@ -236,7 +236,6 @@ if (sortKey && sortMap[sortKey]) {
       intro = `Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.` +
               (results.some(r => r._meta.type === "refresher") ? `\n⚠️ Note: Some of these are Refresher courses.` : "") +
               ` Here are the details:`;
-
       body = results.map(r => `
         <div class="courseBox">
           <span class="mainCourse">${r.name} <span class="arrow">▼</span></span>
@@ -261,7 +260,7 @@ However, here are the available venues and months you can choose from:`;
       body = venueMonthHTML;
     }
 
-    return res.status(200).json({ reply: `${intro}<br><br>${body}` });
+    return res.status(200).json({ reply: `${intro}${body}` });
 
   } catch (err) {
     console.error("API error:", err);

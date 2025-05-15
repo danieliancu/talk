@@ -147,6 +147,15 @@
     animation: slowPulse 1.2s infinite ease-in-out;
   }
 
+  .voiceMute {
+    width: 50px;
+    height: 50px;
+    border-radius: 100%;
+    border:none;
+    margin-right:10px;    
+    opacity:.8;
+  }
+
   .voiceClose {
     background:red;
     width: 50px;
