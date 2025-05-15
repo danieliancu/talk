@@ -195,24 +195,41 @@ const sendToAPI = async (text, msgList) => {
     setMessages(prev => [...prev, { role: "assistant", content: fullReply }]);
 
     // 🔊 Text-to-speech doar pentru introducere
-    let spokenIntro = "";
-    const refresherNoteMatch = fullReply.match(/⚠️ Note:.*?courses\./i);
+let spokenIntro = "";
 
-    if (refresherNoteMatch) {
-      spokenIntro = fullReply.split("⚠️")[0].trim() + ". " + refresherNoteMatch[0].replace("⚠️", "").trim();
-    } else {
-      const introMatch = fullReply.split(/[\n:]/)[0];
-      spokenIntro = introMatch.trim().length > 0 ? introMatch.trim() + "." : fullReply.slice(0, 120);
-    }
+// Elimină HTML și normalizează
+const plainText = fullReply.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
-    const utterance = new SpeechSynthesisUtterance(spokenIntro);
-    utterance.lang = "en-US";
+// Taie până la detalii cursuri / liste
+const stopPhrases = [
+  "Here are the details",
+  "Venues:",
+  "Months:",
+  "The available venue is",
+  "The available month is"
+];
+
+let cutAt = plainText.length;
+for (const phrase of stopPhrases) {
+  const idx = plainText.indexOf(phrase);
+  if (idx !== -1 && idx < cutAt) cutAt = idx;
+}
+spokenIntro = plainText.slice(0, cutAt).trim();
 
 
-    if (!isMuted) {
+
+
+
+
+
+const utterance = new SpeechSynthesisUtterance(spokenIntro);
+utterance.lang = "en-US";
+
+if (!isMuted) {
   if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
 }
+
 
 
   } catch (err) {

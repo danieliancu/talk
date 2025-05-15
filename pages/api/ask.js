@@ -186,8 +186,8 @@ export default async function handler(req, res) {
     if (!month && !location) {
       return res.status(200).json({
         reply: `
-Thanks! You've told me the course is ${keywordSynonyms[validKey]}.<br>
-Could you let me know which ${venueInstruction} you're interested in?<br><br>
+Thanks! You've told me the course is ${keywordSynonyms[validKey]}.
+Could you let me know which ${venueInstruction} you are interested in?
 <div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
   <div><strong>Venues:</strong><br>${venuesList}</div>
   <div><strong>Months:</strong><br>${monthsList}</div>
@@ -233,9 +233,16 @@ if (sortKey && sortMap[sortKey]) {
     if (results.length) {
       results.sort((a, b) => a._meta.start - b._meta.start);
 
-      intro = `Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.` +
-              (results.some(r => r._meta.type === "refresher") ? `\n⚠️ Note: Some of these are Refresher courses.` : "") +
-              ` Here are the details:`;
+      const hasRefresher = results.some(r => r._meta.type === "refresher");
+
+intro = `
+  <div>
+    Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.
+    ${hasRefresher ? ` Note: Some of these are Refresher courses.` : ""}
+    <br>Here are the details:
+  </div>
+`;
+
       body = results.map(r => `
         <div class="courseBox">
           <span class="mainCourse">${r.name} <span class="arrow">▼</span></span>
