@@ -2,30 +2,40 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FiMic } from "react-icons/fi";
-import { FaPaperPlane } from "react-icons/fa";
+import { FaPaperPlane, FaPhoneSlash } from "react-icons/fa";
 import styles from "../styles/Chat.module.css";
+import { keywordSynonyms } from "@/lib/search";
 
 
 export default function ChatUI() {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
   const [input, setInput] = useState("");
+
+const courseListHtml = Object.entries(keywordSynonyms)
+  .map(([abbr, full]) => `<li><strong>${abbr.toUpperCase()}</strong>: ${full}</li>`)
+  .join("");
+
 const [messages, setMessages] = useState([
   {
     role: "system",
-    content:
-      `You are a helpful assistant for Target Zero Training. You have access to all their courses, dates, availability, and prices via function calls. 
-Today's date is ${new Date().toLocaleDateString("en-GB", {
-        year: "numeric",
-        month: "long",
-        day: "numeric"
-      })}. Always use the function if the user requests something specific.`,
+    content: `You are a helpful assistant for Target Zero Training.
+    You always respond based on data available via the searchCourses function, which returns courses, locations, prices, dates and availability.
+    If the user mentions a new course name, even briefly (e.g. "twc course" or just "sssts"), use the function to check the details.    
+    Today's date is ${new Date().toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    })}. Always use the function if the user requests something specific.`,
   },
-    {
+  {
     role: "assistant",
-    content: "Hello! How can I assist you today?",
+    content: `Hello! I can help you to book one of the following courses:<ul class="listCourses">${courseListHtml}</ul>`,
   }
 ]);
+
+
+
   const [recognition, setRecognition] = useState(null);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
 
@@ -67,11 +77,14 @@ Today's date is ${new Date().toLocaleDateString("en-GB", {
     wrapper.className = `${styles.bubbleWrap} ${isUser ? styles.user : styles.bot}`;
     const bubble = document.createElement("div");
     bubble.className = styles.bubble;
-    if (text.includes("<div")) {
+
+    if (/<[a-z][\s\S]*>/i.test(text)) {
       bubble.innerHTML = text;
     } else {
       bubble.textContent = text;
     }
+
+
     wrapper.appendChild(bubble);
     chatRef.current.appendChild(wrapper);
     scrollToBottom();
@@ -95,8 +108,9 @@ const sendMessage = async () => {
 
   // trimite doar sistem + ultimele 6 mesaje reale
   const systemMessage = allMsgs[0];
-  const recent = allMsgs.slice(1).slice(-6);
-  const payload = [systemMessage, ...recent];
+  // const recent = allMsgs.slice(1).slice(-6);
+  // const payload = [systemMessage, ...recent];
+  const payload = allMsgs;
 
   setInput("");
   await sendToAPI(value, payload);
@@ -171,16 +185,11 @@ const sendToAPI = async (text, msgList) => {
     const data = await response.json();
     const fullReply = data.reply || "No reply from assistant.";
 
-    const tempBubble = document.createElement("div");
-    tempBubble.className = `${styles.bubbleWrap} ${styles.bot}`;
-    const bubble = document.createElement("div");
-    bubble.className = styles.bubble;
-    bubble.textContent = "Assistant is answering...";
-    tempBubble.appendChild(bubble);
-    chatRef.current.appendChild(tempBubble);
-    scrollToBottom();
+    // ✅ Afișează răspunsul direct în UI
+    appendMessage(fullReply, false);
+    setMessages(prev => [...prev, { role: "assistant", content: fullReply }]);
 
-    // 👇 Construim mesajul de citit, inclusiv nota de Refresher
+    // 🔊 Text-to-speech doar pentru introducere
     let spokenIntro = "";
     const refresherNoteMatch = fullReply.match(/⚠️ Note:.*?courses\./i);
 
@@ -194,12 +203,6 @@ const sendToAPI = async (text, msgList) => {
     const utterance = new SpeechSynthesisUtterance(spokenIntro);
     utterance.lang = "en-US";
 
-    utterance.onend = () => {
-      if (tempBubble && tempBubble.parentNode) tempBubble.remove();
-      appendMessage(fullReply, false);
-      setMessages(prev => [...prev, { role: "assistant", content: fullReply }]);
-    };
-
     if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
 
@@ -210,11 +213,16 @@ const sendToAPI = async (text, msgList) => {
 };
 
 
+
   const startVoice = () => {
     if (!("webkitSpeechRecognition" in window)) {
       alert("Browser does not support voice input");
       return;
     }
+
+    // 🛑 Oprește orice vorbire activă înainte de a porni recunoașterea vocală
+    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+
     const rec = new webkitSpeechRecognition();
     rec.lang = "en-US";
     rec.interimResults = false;
@@ -249,6 +257,7 @@ const sendToAPI = async (text, msgList) => {
       <div ref={chatRef} className={styles.chat}></div>
       <div className={styles.voiceWrap}>
       <button className={styles.voice} onClick={startVoice}><FiMic size={34} color="#19307F" /></button>
+      <button className={styles.voiceClose} onClick={()=>window.location.reload()}><FaPhoneSlash size={34} color="white" /></button>
       </div>
       <div className={styles.inputWrap}>
         <input

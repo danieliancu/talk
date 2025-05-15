@@ -1,0 +1,28 @@
+{
+  "CITB": {
+    "smsts": "Site Management Safety Training Scheme",
+    "sssts": "Site Supervisors Safety Training Scheme",
+    "hsa": "Health and Safety Awareness",
+    "twc": "Temporary Works Coordinator",
+    "tws": "Temporary Works Supervisor",
+    "seats": "Site Environmental Awareness Training Scheme"
+  },
+  "IOSH": {
+    "iosh-working": "IOSH Working Safely",
+    "iosh-managing": "IOSH Managing Safely"
+  },
+  "NEBOSH": {
+    "nebosh-general": "NEBOSH National General Certificate in Occupational Health and Safety",
+    "nebosh-construction": "NEBOSH Health & Safety Management for Construction Certificate"
+  },
+  "IEMA": {
+    "iema-foundation": "Foundation Certificate in Environmental Management"
+  },
+  "MHFA": {
+    "mhfa": "Mental Health First Aid"
+  },
+  "EUSR": {
+    "eusr-water-am": "Water Hygiene AM Session",
+    "eusr-water-pm": "Water Hygiene PM Session"
+  }
+}

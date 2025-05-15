@@ -1,25 +1,58 @@
-// pages/api/ask.js
-
 import {
   searchCourses,
-  extractLocation,
   synonymLookup,
-  keywordSynonyms
+  keywordSynonyms,
 } from "@/lib/search";
+import { normalizeText } from "@/lib/utils/normalize";
+import { buildMeta } from "@/lib/courses/buildMeta";
+import { detectSortKey } from "@/lib/sortTriggers";
+import { FaUser } from "react-icons/fa";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+
+// 🔄 Fallback logic: sugestii și mapări fuzzy
+function handleKeywordFallback(rawInput) {
+  const keywordInput = normalizeText(rawInput);
+
+  const suggestions = [
+    { match: "nebosh", reply: `NEBOSH includes multiple certifications. Did you mean "NEBOSH General" or "NEBOSH Construction"? Please specify.` },
+    { match: "iosh", reply: `IOSH includes two options. Did you mean "IOSH Working Safely" or "IOSH Managing Safely"?` },
+    { match: "eusr", reply: `EUSR Water Hygiene includes two options. Did you mean "Water Hygiene AM Session" or "PM Session"?` },
+    { match: "hygiene", reply: `EUSR Water Hygiene includes two options. Did you mean "Water Hygiene AM Session" or "PM Session"?` },
+    { match: "water", reply: `EUSR Water Hygiene includes two options. Did you mean "Water Hygiene AM Session" or "PM Session"?` },
+  ];
+
+  for (const s of suggestions) {
+    if (keywordInput.includes(s.match)) return { type: "suggestion", reply: s.reply };
   }
+
+  const fallbacks = [
+    { keyword: "mental health", key: "mhfa" },
+    { keyword: "environment", key: "iema-foundation" },
+    { keyword: "site supervisor", key: "sssts" },
+    { keyword: "site manager", key: "smsts" },
+    { keyword: "temporary works coordinator", key: "twc" },
+    { keyword: "temporary works supervisor", key: "tws" },
+    { keyword: "site environmental", key: "seats" },
+    { keyword: "health and safety awareness", key: "hsa" },
+    { keyword: "water hygiene", key: "eusr-water" },
+  ];
+
+  for (const f of fallbacks) {
+    if (keywordInput.includes(f.keyword)) return { type: "validKey", validKey: f.key };
+  }
+
+  return null;
+}
+
+// 🔧 Main handler
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const { messages, functions, function_call, type } = req.body;
-
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ error: "Missing OpenAI API key in environment." });
-  }
+  if (!process.env.OPENAI_API_KEY) return res.status(500).json({ error: "Missing OpenAI API key" });
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -33,162 +66,205 @@ export default async function handler(req, res) {
       }),
     });
 
-    const data = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || "OpenAI API error" });
-    }
+    const data = await openaiRes.json();
+    if (!openaiRes.ok) return res.status(openaiRes.status).json({ error: data.error?.message || "OpenAI API error" });
 
     const choice = data.choices?.[0];
-    if (choice?.finish_reason === "function_call") {
-      const args = JSON.parse(choice.message.function_call.arguments || '{}');
-      let { keyword, month, location } = args;
-      const typeFilter = args.type || type || null;
-
-      // ✅ fallback dacă keyword lipsește → extragem din ultimul mesaj
-      const lastUserMsg = messages.at(-1)?.content.toLowerCase() || "";
-      if (!keyword && lastUserMsg) {
-        const words = lastUserMsg.split(/\s+/);
-        for (const word of words) {
-          const norm = word.toLowerCase().replace(/[^\w\s]/g, "").trim();
-          if (synonymLookup[norm]) {
-            keyword = norm;
-            break;
-          }
-        }
-      }
-
-      const keywordInput = keyword?.toLowerCase().replace(/[^\w\s]/g, "").trim();
-      let validKey = synonymLookup[keywordInput];
-
-      const secondLastMsg = messages.at(-2)?.content || "";
-      const suggestionMatch = secondLastMsg.match(/Did you mean "(.*?)" \((.*?)\)/i);
-
-      if (!validKey && lastUserMsg === "yes" && suggestionMatch) {
-        validKey = suggestionMatch[2].toLowerCase();
-        keyword = validKey;
-      }
-
-      if (!validKey && lastUserMsg === "no" && suggestionMatch) {
-        return res.status(200).json({
-          reply: `No problem! Could you please tell me the correct course name you're looking for?`
-        });
-      }
-
-      if (!validKey && keywordInput === "nebosh") {
-        return res.status(200).json({
-          reply: `NEBOSH includes multiple certifications. Did you mean "NEBOSH General" or "NEBOSH Construction"? Please specify.`
-        });
-      }
-
-      if (!validKey && keywordInput === "iosh") {
-        return res.status(200).json({
-          reply: `IOSH includes two options. Did you mean "IOSH Working Safely" or "IOSH Managing Safely"?`
-        });
-      }
-
-
-      if (!validKey) {
-        const partialMatch = Object.entries(keywordSynonyms).find(
-          ([abbr, full]) =>
-            keywordInput && (abbr.includes(keywordInput) || full.toLowerCase().includes(keywordInput))
-        );
-
-        if (partialMatch) {
-          const [abbr, full] = partialMatch;
-          return res.status(200).json({
-            reply: `Did you mean "${full}" (${abbr.toUpperCase()})? Please confirm by the course code or saying "yes".`
-          });
-        }
-
-        return res.status(200).json({
-          reply: `I couldn't identify a valid course type. Please specify one of the following: ${Object.keys(keywordSynonyms).join(", ").toUpperCase()}`
-        });
-      }
-
-      const params = [month, location].filter(Boolean);
-      if (params.length < 1) {
-        return res.status(200).json({
-          reply: `Thanks! You've told me the course type. Could you also provide the month or location so I can show you relevant courses?`
-        });
-      }
-
-      const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
-      const allProducts = await courseRes.json();
-
-      const results = searchCourses(
-        allProducts,
-        validKey,
-        month,
-        args.require_available_spaces,
-        location,
-        typeFilter
-      );
-
-      const userQuestion = messages.at(-1)?.content.toLowerCase() || "";
-
-      if (userQuestion.includes("cheapest") || userQuestion.includes("lowest price")) {
-        results.sort((a, b) => a._meta.price - b._meta.price);
-      } else if (userQuestion.includes("most expensive") || userQuestion.includes("highest price")) {
-        results.sort((a, b) => b._meta.price - a._meta.price);
-      } else if (userQuestion.includes("soonest") || userQuestion.includes("earliest")) {
-        results.sort((a, b) => a._meta.start - b._meta.start);
-      } else if (userQuestion.includes("latest")) {
-        results.sort((a, b) => b._meta.start - a._meta.start);
-      } else if (userQuestion.includes("shortest")) {
-        results.sort((a, b) => a._meta.duration_days - b._meta.duration_days);
-      } else if (userQuestion.includes("longest")) {
-        results.sort((a, b) => b._meta.duration_days - a._meta.duration_days);
-      } else if (userQuestion.includes("most spaces")) {
-        results.sort((a, b) => b._meta.available_spaces - a._meta.available_spaces);
-      } else if (userQuestion.includes("least spaces")) {
-        results.sort((a, b) => a._meta.available_spaces - b._meta.available_spaces);
-      }
-
-      let intro = "";
-      if (results.length > 0) {
-        const hasRefresher = results.some(r => r._meta.type === "refresher");
-        intro = `Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.`;
-        if (hasRefresher) {
-          intro += `\n⚠️ Note: Some of these are Refresher courses.`;
-        }
-        intro += ` Here are the details:`;
-      } else {
-        intro = `I'm sorry, I couldn't find any ${validKey.toUpperCase()} courses matching your criteria.`;
-      }
-
-const reply = `${intro}` + results.map(r => `
-  <div class="courseBox">
-    <span class="mainCourse">
-      ${r.name} <span class="arrow">▼</span>
-    </span>
-    <span class="bodyCourse">
-      <ul class="courseDetails">
-        <li><strong>Location:</strong> ${r._meta.location}</li>
-        <li><strong>Dates:</strong> ${r.dates_list}</li>
-        <li><strong>Price:</strong> £${r.price}</li>
-        <li><strong>Available Spaces:</strong> ${r.available_spaces}</li>
-      </ul>
-    </span>
-    <a href="${r.link}" class="bookButton">BOOK NOW!</a>
-  </div>
-`).join("");
-
-
+    if (choice?.finish_reason !== "function_call") {
+      const reply = choice?.message?.content || "Could you please clarify what course you're looking for?";
       return res.status(200).json({ reply });
     }
 
-    let reply = "No reply from assistant.";
+    const args = JSON.parse(choice.message.function_call.arguments || '{}');
+    let { keyword, month, location } = args;
+    const typeFilter = args.type || type || null;
 
-    if (choice?.finish_reason === "stop" && choice?.message?.content) {
-      reply = choice.message.content;
-    } else if (choice?.finish_reason === "stop" && !choice.message?.content) {
-      reply = "Could you please clarify what course you're looking for?";
+    const lastUserMsg = messages.at(-1)?.content.toLowerCase() || "";
+    if (!keyword) {
+      keyword = lastUserMsg.split(/\s+/).find(word => synonymLookup[normalizeText(word)]) || "";
     }
 
-    return res.status(200).json({ reply });
+    const keywordInput = normalizeText(keyword);
+    let validKey = synonymLookup[keywordInput];
 
-  } catch (error) {
-    console.error("API error:", error);
+    const secondLastMsg = messages.at(-2)?.content || "";
+    const suggestionMatch = secondLastMsg.match(/Did you mean "(.*?)" \((.*?)\)/i);
+    if (!validKey && lastUserMsg === "yes" && suggestionMatch) {
+      validKey = suggestionMatch[2].toLowerCase();
+      keyword = validKey;
+    }
+
+    if (!validKey && lastUserMsg === "no") {
+      return res.status(200).json({ reply: `No problem! Could you please tell me the correct course name?` });
+    }
+
+    const fallback = handleKeywordFallback(keyword);
+    if (!validKey && fallback) {
+      if (fallback.type === "suggestion") return res.status(200).json({ reply: fallback.reply });
+      if (fallback.type === "validKey") {
+        validKey = fallback.validKey;
+        keyword = validKey;
+      }
+    }
+
+    if (!validKey) {
+      return res.status(200).json({
+        reply: `I'm not sure which course you're referring to yet. Please confirm the exact course name or code.`,
+      });
+    }
+
+    const lastKeyword = lastUserMsg
+      .split(/\s+/)
+      .map(w => normalizeText(w))
+      .find(w => synonymLookup[w]);
+
+    if (lastKeyword) {
+      const lastResolved = synonymLookup[lastKeyword];
+      if (lastResolved && lastResolved !== validKey) {
+        month = null;
+        location = null;
+      }
+    }
+
+    const courseRes = await fetch("https://www.targetzerotraining.co.uk/wp-json/custom/v1/products");
+    const allProducts = await courseRes.json();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const venues = Array.from(
+      new Set(
+        allProducts
+          .filter(p => {
+            const name = normalizeText(p.name || "");
+            return [validKey, keywordSynonyms[validKey], keyword]
+              .map(normalizeText)
+              .some(needle => name.includes(needle) || needle.split(" ").every(w => name.includes(w)));
+          })
+          .map(p => {
+            p._meta = buildMeta(p, today);
+            return p._meta?.location;
+          })
+          .filter(Boolean)
+      )
+    );
+
+    const months = Array.from(
+      new Set(
+        allProducts
+          .filter(p => {
+            const name = normalizeText(p.name || "");
+            return [validKey, keywordSynonyms[validKey], keyword]
+              .map(normalizeText)
+              .some(needle => name.includes(needle) || needle.split(" ").every(w => name.includes(w)));
+          })
+          .map(p => {
+            const match = p.start_date?.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\b/i);
+            return match?.[0] || null;
+          })
+          .filter(Boolean)
+      )
+    ).sort((a, b) => new Date(`01 ${a} 2024`) - new Date(`01 ${b} 2024`));
+
+    let venuesList = "none found";
+    let monthsList = "none found";
+    let venueInstruction = "month or venue";
+
+    if (venues.length === 1 && months.length === 1) {
+      venuesList = `The available venue is <strong>${venues[0]}</strong>`;
+      monthsList = `The available month is <strong>${months[0]}</strong>`;
+      venueInstruction = "different month or venue";
+    } else {
+      if (venues.length > 0) {
+        venuesList = `<ul style="margin: 0; padding-left: 20px; font-size: 12px;">${venues.map(v => `<li>${v}</li>`).join("")}</ul>`;
+      }
+      if (months.length > 0) {
+        monthsList = `<ul style="margin: 0; padding-left: 20px; font-size: 12px;">${months.map(m => `<li>${m}</li>`).join("")}</ul>`;
+      }
+    }
+
+    if (!month && !location) {
+      return res.status(200).json({
+        reply: `
+Thanks! You've told me the course is ${keywordSynonyms[validKey]}.<br>
+Could you let me know which ${venueInstruction} you're interested in?<br><br>
+<div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
+  <div><strong>Venues:</strong><br>${venuesList}</div>
+  <div><strong>Months:</strong><br>${monthsList}</div>
+</div>
+`
+      });
+    }
+
+    const results = searchCourses(allProducts, validKey, month, args.require_available_spaces, location, typeFilter);
+    const userQuestion = lastUserMsg;
+
+    const sortMap = {
+      cheapest: (a, b) => a._meta.price - b._meta.price,
+      "lowest price": (a, b) => a._meta.price - b._meta.price,
+      "most expensive": (a, b) => b._meta.price - a._meta.price,
+      "highest price": (a, b) => b._meta.price - a._meta.price,
+      soonest: (a, b) => a._meta.start - b._meta.start,
+      earliest: (a, b) => a._meta.start - b._meta.start,
+      latest: (a, b) => b._meta.start - a._meta.start,
+      shortest: (a, b) => a._meta.duration_days - b._meta.duration_days,
+      longest: (a, b) => b._meta.duration_days - a._meta.duration_days,
+      "most spaces": (a, b) => b._meta.available_spaces - a._meta.available_spaces,
+      "least spaces": (a, b) => a._meta.available_spaces - b._meta.available_spaces,
+    };
+
+const sortKey = detectSortKey(userQuestion);
+if (sortKey && sortMap[sortKey]) {
+  results.sort(sortMap[sortKey]);
+}
+
+
+    // ✅ HTML part for venues + months
+    const venueMonthHTML = `
+      <div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
+        <div><strong>Venues:</strong><br>${venuesList}</div>
+        <div><strong>Months:</strong><br>${monthsList}</div>
+      </div>
+    `;
+
+    let intro = "";
+    let body = "";
+
+    if (results.length) {
+      results.sort((a, b) => a._meta.start - b._meta.start);
+
+      intro = `Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.` +
+              (results.some(r => r._meta.type === "refresher") ? `\n⚠️ Note: Some of these are Refresher courses.` : "") +
+              ` Here are the details:`;
+
+      body = results.map(r => `
+        <div class="courseBox">
+          <span class="mainCourse">${r.name} <span class="arrow">▼</span></span>
+          <span class="bodyCourse">
+            <ul class="courseDetails">
+              <li><strong>Location:</strong> ${r._meta.location}</li>
+              <li><strong>Dates:</strong> ${r.dates_list}</li>
+              <li><strong>Price:</strong> £${r.price}</li>
+              <li><strong>Available Spaces:</strong> ${r.available_spaces}</li>
+            </ul>
+          </span>
+          <a href="${r.link}" class="bookButton">
+            <span>👤 ${r.available_spaces}</span>
+            <span>£${r.price}</span>
+            <span>BOOK NOW</span>
+          </a>
+        </div>
+      `).join("");
+    } else {
+      intro = `I'm sorry, I couldn't find any ${validKey.toUpperCase()} courses matching your criteria.<br>
+However, here are the available venues and months you can choose from:`;
+      body = venueMonthHTML;
+    }
+
+    return res.status(200).json({ reply: `${intro}<br><br>${body}` });
+
+  } catch (err) {
+    console.error("API error:", err);
     return res.status(500).json({ error: "Internal server error." });
   }
 }
