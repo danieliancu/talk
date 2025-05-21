@@ -52,6 +52,17 @@
   margin-top:-5px;
 }
 
+
+.submenu span {
+  border-bottom: 2px solid transparent;
+  line-height:14px;
+}
+
+.submenu span.selected {
+  border-bottom: 2px solid orange;
+}
+
+
   .chat {
     flex: 1;
     padding: 70px 16px 80px 16px;

@@ -250,16 +250,18 @@ Just type or say which ${venueInstruction} you are interested in?
       const hasRefresher = results.some(r => r._meta.type === "refresher");
 
       intro = `
-  <div>
-    Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.
-    ${hasRefresher ? ` Note: Some of these are Refresher courses.` : ""}
-    <br>Here are the details:
-  </div>
-`;
+        <div>
+          Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.
+          ${hasRefresher ? ` Note: Some of these are Refresher courses.` : ""}
+          <br>Here are the details:
+        </div>
+      `;
 
       body = results.map(r => `
         <div class="courseBox">
-          <span class="mainCourse">${r.name} <span class="arrow">▼</span></span>
+          <span class="mainCourse">${
+            r.name.replace(/(Refresher)/i, '<span style="background:#e77b1b; color:white; padding:2px 4px; border-radius:3px;">$1</span>')
+          } <span class="arrow">▼</span></span>
           <span class="bodyCourse">
             <ul class="courseDetails">
               <li><strong>Location:</strong> ${r._meta.location}</li>

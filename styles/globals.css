@@ -39,18 +39,24 @@ a {
 .mainCourse {
   cursor: pointer;
   user-select: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   font-size: 14px;
   line-height:20px;
   padding:10px 0;
+  position: relative;
 }
 
 .arrow {
-  margin-left: 8px;
   transition: transform 0.3s;
-  color:#e77b1b;
+  background:#3750A4;
+  color:white;
+  position: absolute;
+  top:10px;
+  right:-10px;
+  border-radius:100%;
+  width:20px;
+  height:20px;
+  display: flex;
+  justify-content: center;
 }
 
 .mainCourse.open .arrow {

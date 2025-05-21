@@ -15,15 +15,20 @@ export default function ChatUI() {
   const [selectedCategory, setSelectedCategory] = useState("CITB");
 
   const handleCodeClick = (code) => {
-    appendMessage(code.toUpperCase(), true); // afișează ca și cum e de la utilizator
+    setSelectedCode(code);
+    appendMessage(code.toUpperCase(), true);
     const updatedMessages = [...messages, { role: "user", content: code }];
     setMessages(updatedMessages);
     sendToAPI(code, updatedMessages);
   };
 
+
   const [isInputFocused, setIsInputFocused] = useState(false);
 
-const shouldHidePlaceholder = isInputFocused || input.trim().length > 0;
+  const shouldHidePlaceholder = isInputFocused || input.trim().length > 0;
+
+  const [selectedCode, setSelectedCode] = useState(null);
+
 
 
 
@@ -284,6 +289,7 @@ const startVoice = () => {
               <span
                 key={code}
                 onClick={() => handleCodeClick(code)}
+                className={selectedCode === code ? styles.selected : ""}
               >
                 {code.toUpperCase()}
               </span>
