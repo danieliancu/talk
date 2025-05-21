@@ -1,3 +1,5 @@
+//pages/api/ask.js
+
 import {
   searchCourses,
   synonymLookup,
@@ -8,11 +10,19 @@ import { buildMeta } from "@/lib/courses/buildMeta";
 import { detectSortKey } from "@/lib/sortTriggers";
 import { FaUser } from "react-icons/fa";
 
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import util from "util";
+
+
+
+
+
 
 // 🔄 Fallback logic: sugestii și mapări fuzzy
 function handleKeywordFallback(rawInput) {
   const keywordInput = normalizeText(rawInput);
-
   const suggestions = [
     { match: "nebosh", reply: `NEBOSH includes multiple certifications. Did you mean "NEBOSH General" or "NEBOSH Construction"? Please specify.` },
     { match: "iosh", reply: `IOSH includes two options. Did you mean "IOSH Working Safely" or "IOSH Managing Safely"?` },
@@ -44,7 +54,10 @@ function handleKeywordFallback(rawInput) {
   return null;
 }
 
-// 🔧 Main handler
+
+
+
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
@@ -71,9 +84,14 @@ export default async function handler(req, res) {
 
     const choice = data.choices?.[0];
     if (choice?.finish_reason !== "function_call") {
-      const reply = choice?.message?.content || "Could you please clarify what course you're looking for?";
-      return res.status(200).json({ reply });
+      const reply = choice?.message?.content || "Just type or say what course you're looking for?";
+
+      // Google TTS logic
+return res.status(200).json({ reply });
+
     }
+
+
 
     const args = JSON.parse(choice.message.function_call.arguments || '{}');
     let { keyword, month, location } = args;
@@ -95,7 +113,7 @@ export default async function handler(req, res) {
     }
 
     if (!validKey && lastUserMsg === "no") {
-      return res.status(200).json({ reply: `No problem! Could you please tell me the correct course name?` });
+      return res.status(200).json({ reply: `No problem! "Just type or say the correct course name?` });
     }
 
     const fallback = handleKeywordFallback(keyword);
@@ -107,9 +125,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // 🔧 Verificare suplimentară pe baza synonymLookup
+if (!validKey && keywordInput in synonymLookup) {
+  validKey = synonymLookup[keywordInput];
+}
+
     if (!validKey) {
       return res.status(200).json({
-        reply: `I'm not sure which course you're referring to yet. Please confirm the exact course name or code.`,
+        reply: `I'm not sure which course you're referring to yet. Just type or say the exact course name or code.`,
       });
     }
 
@@ -187,7 +210,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         reply: `
 Thanks! You've told me the course is ${keywordSynonyms[validKey]}.
-Could you let me know which ${venueInstruction} you are interested in?
+"Just type or say which ${venueInstruction} you are interested in?
 <div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
   <div><strong>Venues:</strong><br>${venuesList}</div>
   <div><strong>Months:</strong><br>${monthsList}</div>
@@ -213,13 +236,11 @@ Could you let me know which ${venueInstruction} you are interested in?
       "least spaces": (a, b) => a._meta.available_spaces - b._meta.available_spaces,
     };
 
-const sortKey = detectSortKey(userQuestion);
-if (sortKey && sortMap[sortKey]) {
-  results.sort(sortMap[sortKey]);
-}
+    const sortKey = detectSortKey(userQuestion);
+    if (sortKey && sortMap[sortKey]) {
+      results.sort(sortMap[sortKey]);
+    }
 
-
-    // ✅ HTML part for venues + months
     const venueMonthHTML = `
       <div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
         <div><strong>Venues:</strong><br>${venuesList}</div>
@@ -232,10 +253,9 @@ if (sortKey && sortMap[sortKey]) {
 
     if (results.length) {
       results.sort((a, b) => a._meta.start - b._meta.start);
-
       const hasRefresher = results.some(r => r._meta.type === "refresher");
 
-intro = `
+      intro = `
   <div>
     Sure! I found ${results.length} ${validKey.toUpperCase()} course${results.length > 1 ? "s" : ""}.
     ${hasRefresher ? ` Note: Some of these are Refresher courses.` : ""}
@@ -267,7 +287,9 @@ However, here are the available venues and months you can choose from:`;
       body = venueMonthHTML;
     }
 
-    return res.status(200).json({ reply: `${intro}${body}` });
+    const finalReply = `${intro}${body}`;
+return res.status(200).json({ reply: finalReply });
+
 
   } catch (err) {
     console.error("API error:", err);

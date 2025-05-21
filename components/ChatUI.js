@@ -2,21 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FiMic } from "react-icons/fi";
-import { FaPaperPlane, FaPowerOff, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
+import { FaPaperPlane, FaPowerOff } from "react-icons/fa";
 import styles from "../styles/Chat.module.css";
 import { keywordSynonyms } from "@/lib/search";
-
+import coursesData from "../data/coursesCatalog.json";
 
 export default function ChatUI() {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
   const [input, setInput] = useState("");
-  const [isMuted, setIsMuted] = useState(false);
+
+  const [selectedCategory, setSelectedCategory] = useState("CITB");
+
+  const handleCodeClick = (code) => {
+    appendMessage(code.toUpperCase(), true); // afișează ca și cum e de la utilizator
+    const updatedMessages = [...messages, { role: "user", content: code }];
+    setMessages(updatedMessages);
+    sendToAPI(code, updatedMessages);
+  };
+
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
+const shouldHidePlaceholder = isInputFocused || input.trim().length > 0;
 
 
-const courseListHtml = Object.entries(keywordSynonyms)
-  .map(([abbr, full]) => `<li><strong>${abbr.toUpperCase()}</strong>: ${full}</li>`)
-  .join("");
+
+
+
 
 const [messages, setMessages] = useState([
   {
@@ -32,7 +44,7 @@ const [messages, setMessages] = useState([
   },
   {
     role: "assistant",
-    content: `Hello! I can help you to book one of the following courses:<ul class="listCourses">${courseListHtml}</ul>`,
+    content: `Welcome! You can search for a training course by typing, speaking, or selecting one from the menu above.`,
   }
 ]);
 
@@ -92,14 +104,7 @@ const [messages, setMessages] = useState([
     scrollToBottom();
   };
 
-const speak = (text) => {
-  if (isMuted) return; // NU vorbi dacă e mut
 
-  if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  window.speechSynthesis.speak(utterance);
-};
 
 
 const sendMessage = async () => {
@@ -188,47 +193,15 @@ const sendToAPI = async (text, msgList) => {
     });
 
     const data = await response.json();
+
+
     const fullReply = data.reply || "No reply from assistant.";
 
     // ✅ Afișează răspunsul direct în UI
     appendMessage(fullReply, false);
     setMessages(prev => [...prev, { role: "assistant", content: fullReply }]);
 
-    // 🔊 Text-to-speech doar pentru introducere
-let spokenIntro = "";
 
-// Elimină HTML și normalizează
-const plainText = fullReply.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
-
-// Taie până la detalii cursuri / liste
-const stopPhrases = [
-  "Here are the details",
-  "Venues:",
-  "Months:",
-  "The available venue is",
-  "The available month is"
-];
-
-let cutAt = plainText.length;
-for (const phrase of stopPhrases) {
-  const idx = plainText.indexOf(phrase);
-  if (idx !== -1 && idx < cutAt) cutAt = idx;
-}
-spokenIntro = plainText.slice(0, cutAt).trim();
-
-
-
-
-
-
-
-const utterance = new SpeechSynthesisUtterance(spokenIntro);
-utterance.lang = "en-US";
-
-if (!isMuted) {
-  if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(utterance);
-}
 
 
 
@@ -240,36 +213,44 @@ if (!isMuted) {
 
 
 
-  const startVoice = () => {
-    if (!("webkitSpeechRecognition" in window)) {
-      alert("Browser does not support voice input");
-      return;
-    }
+const startVoice = () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Your browser does not support voice recognition.");
+    return;
+  }
 
-    // 🛑 Oprește orice vorbire activă înainte de a porni recunoașterea vocală
-    if (window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+  const recognitionInstance = new SpeechRecognition();
+  recognitionInstance.lang = "en-GB";
+  recognitionInstance.interimResults = false;
+  recognitionInstance.maxAlternatives = 1;
 
-    const rec = new webkitSpeechRecognition();
-    rec.lang = "en-US";
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-
-    rec.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      appendMessage(transcript, true);
-      const updatedMessages = [...messages, { role: "user", content: transcript }];
-      setMessages(updatedMessages);
-      sendToAPI(transcript, updatedMessages);
-      setShowVoiceModal(false);
-    };
-
-    rec.onerror = () => setShowVoiceModal(false);
-    rec.onend = () => setShowVoiceModal(false);
-
-    setRecognition(rec);
+  recognitionInstance.onstart = () => {
     setShowVoiceModal(true);
-    rec.start();
   };
+
+  recognitionInstance.onerror = () => {
+    appendMessage("❗Speech recognition error. Please try again.", true);
+    setShowVoiceModal(false);
+  };
+
+  recognitionInstance.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    appendMessage(transcript, true);
+    const updatedMessages = [...messages, { role: "user", content: transcript }];
+    setMessages(updatedMessages);
+    sendToAPI(transcript, updatedMessages);
+    setShowVoiceModal(false);
+  };
+
+  recognitionInstance.onend = () => {
+    setShowVoiceModal(false);
+  };
+
+  recognitionInstance.start();
+  setRecognition(recognitionInstance);
+};
+
 
   const stopVoice = () => {
     if (recognition) recognition.stop();
@@ -277,46 +258,65 @@ if (!isMuted) {
     setShowVoiceModal(false);
   };
 
+
+
   return (
     <div className={styles.container}>
-      <audio id="tts-audio" preload="auto" />
-      <div ref={chatRef} className={styles.chat}></div>
+      <div ref={chatRef} className={styles.chat}>
+        <div className={styles.top}>
+          <div className={styles.menu}>
+            {Object.keys(coursesData).map((category) => (
+              <span
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                style={{
+                  cursor: "pointer",
+                  backgroundColor: selectedCategory === category ? "#e77b1b" : "transparent",
+                }}
+              >
+                {category}
+              </span>
+            ))}
+          </div>
+          <div className={styles.submenu}>
+            {Object.keys(coursesData[selectedCategory]).map((code) => (
+              <span
+                key={code}
+                onClick={() => handleCodeClick(code)}
+              >
+                {code.toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+
+      </div>
       <div className={styles.voiceWrap}>
-<button
-  className={styles.voiceMute}
-  onClick={() => {
-    setIsMuted((prev) => {
-      const newValue = !prev;
-      localStorage.setItem("isMuted", newValue); // optional, dacă vrei să salvezi
-      if (newValue) {
-        window.speechSynthesis.cancel(); // 🛑 oprește orice speech imediat
-      }
-      return newValue;
-    });
-  }}
->
-  {isMuted ? (
-    <FaVolumeMute style={{ color: "red" }} size={34} />
-  ) : (
-    <FaVolumeUp size={34} color="#19307F" />
-  )}
-</button>
-
-
-      <button className={styles.voice} onClick={startVoice}><FiMic size={34} color="#19307F" /></button>
       <button className={styles.voiceClose} onClick={()=>window.location.reload()}><FaPowerOff size={34} color="white" /></button>
       </div>
-      <div className={styles.inputWrap}>
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about courses..."
-        />
-        <button className={styles.sendButton} onClick={sendMessage}>
-          <FaPaperPlane size={20} color="white" />
-        </button>
-      </div>
+
+<div className={styles.inputWrap}>
+  <div className={`${styles.placeholderWrap} ${shouldHidePlaceholder ? styles.hidden : ""}`}>
+    Find your course by <span className={styles.rotating}><span>typing</span><span>speaking</span></span>
+  </div>
+
+  <button className={styles.voice} onClick={startVoice}><FiMic size={34} color="#19307F" /></button>
+  <input
+    ref={inputRef}
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onFocus={() => setIsInputFocused(true)}
+    onBlur={() => setIsInputFocused(false)}
+    placeholder=""
+  />
+
+  <button className={styles.sendButton} onClick={sendMessage}>
+    <FaPaperPlane size={20} color="white" />
+  </button>
+</div>
+
+
+
 
       {showVoiceModal && (
         <div className={styles.modal}>

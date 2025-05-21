@@ -10,9 +10,51 @@
     position: relative;
   }
   
+
+.top {
+    color: white;
+    background: grey;
+    margin-bottom: 10px;
+    position: relative;
+    position: absolute;
+    top:0px;
+    z-index:1;
+    width: 100%;
+    left:0px;
+    height:50px;
+}
+
+.top > div {
+  height:25px;
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.menu {
+  background: #19307F;
+  cursor:pointer;
+  gap: 5px;
+}
+
+.menu span {
+  border:1px solid white;
+  padding: 0px 4px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.submenu {
+  background:#3750A4;
+  font-weight:600;
+  gap: 10px;
+  cursor: pointer;
+}
+
   .chat {
     flex: 1;
-    padding: 16px;
+    padding: 60px 16px 16px 16px;
     overflow-y: auto;
     background: black;
   }
@@ -54,14 +96,25 @@
     padding: 10px;
     border-top: 1px solid #ccc;
     background: white;
+    gap: 5px;
+    position: relative;
   }
   
-  .inputWrap input {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
+.inputWrap input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+
+  font-size: 16px;
+  font-weight: 400;
+  color: #999;
+  line-height: 22px;
+  font-family: Poppins, sans-serif;
+}
+
+
+
   
   .buttons {
     margin-top: 8px;
@@ -147,27 +200,18 @@
     animation: slowPulse 1.2s infinite ease-in-out;
   }
 
-  .voiceMute {
-    width: 45px;
-    height: 45px;
-    border-radius: 100%;
-    border:none;
-    opacity:.8;
-    position:fixed;
-    top:55px;
-    right: 5px;
-  }
 
   .voiceClose {
     background:red;
-    width: 45px;
-    height: 45px;
+    width: 48px;
+    height: 48px;
     border-radius: 100%;
     border:none;
-    opacity:.8;
-    top:5px;
+    top:0px;
     right:5px;
     position: fixed;
+    z-index:1;
+    display: none;
   }
   .sendButton {
   background-color: #25D366;
@@ -204,3 +248,47 @@
     height: 16px;
     margin-right: 4px;
   }
+
+
+
+  .placeholderWrap {
+  font-size: 16px;
+  color: #999;
+  margin-left: 20px;
+  margin-bottom: 4px;
+  height: 22px;
+  overflow: hidden;
+  position: absolute;
+  left:50px;
+  bottom:20px;
+  pointer-events: none; /* << permite clicuri prin el */
+
+}
+
+.hidden {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+
+.rotating {
+  display: inline-block;
+  height: 20px;
+  vertical-align: top;
+  animation: scrollWords 6s infinite;
+}
+
+.rotating span {
+  display: block;
+  height: 22px;
+  line-height: 22px;
+  padding-top:2px;
+}
+
+@keyframes scrollWords {
+  0% { transform: translateY(0); }
+  33% { transform: translateY(0); }
+  50% { transform: translateY(-23px); }
+  83% { transform: translateY(-23px); }
+  100% { transform: translateY(0); }
+}
