@@ -12,8 +12,8 @@
   
 
 .top {
-    color: white;
-    background: grey;
+    color: black;
+    background: white;
     margin-bottom: 10px;
     position: fixed;
     top:0px;
@@ -21,6 +21,7 @@
     width: 100%;
     left:0px;
     height:60px;
+    box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .top > div {
@@ -28,32 +29,32 @@
   display: flex;
   align-items: center;
   padding: 15px;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .menu {
-  background: #19307F;
   cursor:pointer;
   gap: 5px;
+  margin-top:5px;
 }
 
 .menu span {
-  border:1px solid white;
-  padding: 0px 4px;
+  border:1px solid #e77b1b;
+  padding: 0px 6px;
   border-radius: 4px;
   background: transparent;
 }
 
 .submenu {
-  background:#3750A4;
-  font-weight:600;
+  font-weight:500;
   gap: 10px;
   cursor: pointer;
+  margin-top:-5px;
 }
 
   .chat {
     flex: 1;
-    padding: 70px 16px 16px 16px;
+    padding: 70px 16px 80px 16px;
     overflow-y: auto;
     background: black;
   }

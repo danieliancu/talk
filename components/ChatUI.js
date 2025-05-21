@@ -272,6 +272,7 @@ const startVoice = () => {
                 style={{
                   cursor: "pointer",
                   backgroundColor: selectedCategory === category ? "#e77b1b" : "transparent",
+                  color: selectedCategory === category ? "white" : "black",
                 }}
               >
                 {category}

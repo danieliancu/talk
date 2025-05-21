@@ -107,7 +107,7 @@ return res.status(200).json({ reply });
     }
 
     if (!validKey && lastUserMsg === "no") {
-      return res.status(200).json({ reply: `No problem! "Just type or say the correct course name?` });
+      return res.status(200).json({ reply: `No problem! Just type or say the correct course name?` });
     }
 
     const fallback = handleKeywordFallback(keyword);
@@ -204,7 +204,7 @@ if (!validKey && keywordInput in synonymLookup) {
       return res.status(200).json({
         reply: `
 Thanks! You've told me the course is ${keywordSynonyms[validKey]}.
-"Just type or say which ${venueInstruction} you are interested in?
+Just type or say which ${venueInstruction} you are interested in?
 <div style="display: flex; gap: 40px; align-items: flex-start; font-size: 12px; line-height: 18px;">
   <div><strong>Venues:</strong><br>${venuesList}</div>
   <div><strong>Months:</strong><br>${monthsList}</div>
