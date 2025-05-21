@@ -3,7 +3,7 @@
     flex-direction: column;
     max-width: 800px;
     margin: 0 auto;
-    height: 100vh;
+    height: 92vh;
     background: white;
     border-radius: 8px;
     overflow: hidden;
@@ -15,21 +15,20 @@
     color: white;
     background: grey;
     margin-bottom: 10px;
-    position: relative;
-    position: absolute;
+    position: fixed;
     top:0px;
     z-index:1;
     width: 100%;
     left:0px;
-    height:50px;
+    height:60px;
 }
 
 .top > div {
-  height:25px;
+  height:30px;
   display: flex;
   align-items: center;
-  padding: 5px;
-  font-size: 10px;
+  padding: 15px;
+  font-size: 12px;
 }
 
 .menu {
@@ -54,7 +53,7 @@
 
   .chat {
     flex: 1;
-    padding: 60px 16px 16px 16px;
+    padding: 70px 16px 16px 16px;
     overflow-y: auto;
     background: black;
   }
@@ -97,15 +96,17 @@
     border-top: 1px solid #ccc;
     background: white;
     gap: 5px;
-    position: relative;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
   }
   
 .inputWrap input {
-  flex: 1;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-
+  width: 70%;
   font-size: 16px;
   font-weight: 400;
   color: #999;
@@ -150,38 +151,9 @@
     justify-content: center;
     font-weight: bold;
     font-size: 1.25rem;
-    animation: pulse 2s infinite;
   }
   
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1.05);
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(1);
-      opacity: 1;
-    }
-  }
 
-  @keyframes slowPulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.02);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
   
 
 .voiceWrap {  
@@ -197,7 +169,7 @@
     border-radius: 100%;
     border:none;
     opacity:.8;
-    animation: slowPulse 1.2s infinite ease-in-out;
+    background-color: white;
   }
 
 

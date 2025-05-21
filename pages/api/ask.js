@@ -8,12 +8,6 @@ import {
 import { normalizeText } from "@/lib/utils/normalize";
 import { buildMeta } from "@/lib/courses/buildMeta";
 import { detectSortKey } from "@/lib/sortTriggers";
-import { FaUser } from "react-icons/fa";
-
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
-import util from "util";
 
 
 
