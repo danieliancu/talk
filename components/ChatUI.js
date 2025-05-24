@@ -1,4 +1,4 @@
-// ChatUI.js
+// components/ChatUI.js
 
 import { useEffect, useRef, useState } from "react";
 import { FiMic } from "react-icons/fi";
@@ -28,11 +28,6 @@ export default function ChatUI() {
   const shouldHidePlaceholder = isInputFocused || input.trim().length > 0;
 
   const [selectedCode, setSelectedCode] = useState(null);
-
-
-
-
-
 
 
 const [messages, setMessages] = useState([
